@@ -46,11 +46,11 @@ done = False
 is_blue = True
 snake= Snake()
 food_got = True
-food_x = rd.randint(10,490)
-food_y = rd.randint(10,490)
+food_x = rd.randint(20,480)
+food_y = rd.randint(45,480)
 clock = pygame.time.Clock()
 pygame.font.init()
-my_font = pygame.font.SysFont('Comic Sans MS', 30)
+my_font = pygame.font.SysFont('Comic Sans MS', 20)
 
 time.sleep(10)
 
@@ -73,19 +73,26 @@ while not done:
         
         
         # edge detection
-        if snake.segmentX[0]+250 < 0:
+        if snake.segmentX[0]+250 < 15:
             done = True
-        if snake.segmentX[0]+250 > 480:
+        if snake.segmentX[0]+250 > 470:
             done = True
-        if snake.segmentY[0]+250 < 0:
+        if snake.segmentY[0]+250 < 40:
             done = True
-        if snake.segmentY[0]+250 > 480:
+        if snake.segmentY[0]+250 > 470:
             done = True
         
         for i in range(0,snake.segments):
             pygame.draw.rect(screen, color, pygame.Rect(snake.segmentX[i]+250,snake.segmentY[i]+250 , 20, 20))
             # termination for the snake crashing into itself
             pygame.draw.rect(screen, (255,100,0), pygame.Rect(food_x-10,food_y-10 , 20, 20))
+            pygame.draw.lines(screen,(255,255,255),False,[[10,35],[490,35]],2)
+            pygame.draw.lines(screen,(255,255,255),False,[[10,35],[10,490]],2)
+            pygame.draw.lines(screen,(255,255,255),False,[[10,490],[490,490]],2)
+            pygame.draw.lines(screen,(255,255,255),False,[[490,35],[490,490]],2)
+            score_text = my_font.render('Score: ' + str(snake.segments-8),False, (255,255,255))
+            screen.blit(score_text,(200,10))
+            
             if i > 0:
                 curr_x = snake.segmentX[i]+250
                 curr_y = snake.segmentY[i]+250
@@ -99,8 +106,8 @@ while not done:
         # ADD FOOD :)
         
         if food_got == True:
-            food_x = rd.randint(10,490)
-            food_y = rd.randint(10,490)
+            food_x = rd.randint(20,480)
+            food_y = rd.randint(45,480)
             food_got = False
         #if snake.movementDirection == 0:
         head_x = snake.segmentX[0]+250
@@ -115,7 +122,7 @@ while not done:
             head_x = snake.segmentX[0]+260
             head_y = snake.segmentY[0]+250
         """
-        foodTolerance = 22
+        foodTolerance = 20
         if (abs(food_x-head_x) < foodTolerance) and (abs(food_y-head_y) < foodTolerance):
             food_got = True
             snake.segmentX = np.append(snake.segmentX,snake.segmentX[snake.segments-1])
@@ -128,8 +135,7 @@ while not done:
 
 
 
-score_text = my_font.render('Score: ' + str(snake.segments-8),False, (255,0,0))
-screen.blit(score_text,(200,10))
+
 pygame.display.flip()
 time.sleep(10)
 pygame.quit()
