@@ -2,38 +2,34 @@
 """
 Created on Fri Sept 27, 2019
 
-@author: Graham Cracker
+@author: Graham Riches
 
 Snake class for snake game. It has segments, and it can move.
+This is extendable to snake AI functionality.
 """
-
-import numpy as np
 
 
 class Snake:
-    def __init__(self, *args, **kwargs):
-        self.segments = 4  # size of the snake to start
-        # all segments start at 0
-        self.segment_x = np.array([4, 3, 2, 1])
-        self.segment_y = np.array([0, 0, 0, 0])
+    def __init__(self):
+        self.segments = 3
+        self.segment_x = [3, 2, 1]
+        self.segment_y = [0, 0, 0]
         self.movement_direction = 0
-
-        # game pixel grid for smooth animations.
-        self.gridX = np.linspace(0, 39, 40)
-        self.gridY = np.linspace(0, 39, 40)
+        self.directions = {'right':0, 'up':1, 'left':2, 'down':3}
 
     def move_snake(self):
-        # movement direction --> 0 right, 1 up, 2 left, 3 down
-        # move trailing limbs up to new positions
+        """
+        Update snake segment locations
+        """
         for i in range(1, self.segments):
             self.segment_x[self.segments-i] = self.segment_x[self.segments-i-1]
             self.segment_y[self.segments-i] = self.segment_y[self.segments-i-1]
         # update the head position
-        if self.movement_direction == 0:
+        if self.movement_direction == self.directions['right']:
             self.segment_x[0] = self.segment_x[0]+1
-        if self.movement_direction == 1:
+        if self.movement_direction == self.directions['up']:
             self.segment_y[0] = self.segment_y[0]+1
-        if self.movement_direction == 2:
+        if self.movement_direction == self.directions['left']:
             self.segment_x[0] = self.segment_x[0]-1
-        if self.movement_direction == 3:
+        if self.movement_direction == self.directions['down']:
             self.segment_y[0] = self.segment_y[0]-1

@@ -2,26 +2,38 @@
 """
 Created on Fri Sep 27 21:08:34 2019
 
-@author: Graham Cracker
-    snake game class. Handles the food and whatnot.
+@author: Graham Riches
+    snake game class. Handles the running of the game.
 """
+import sys
+sys.path.append('C:\ProgramData\Anaconda3\Lib\site-packages')
 
 import random as rd
 import numpy as np
 import pygame
+from pygame.locals import USEREVENT
 import time
 from app_snake import Snake
 
 
 class SnakeGame:
-    def __init__(self, _grid_size=20, _display_x=800, _display_y=600):
+    def __init__(self, grid_size=20, scaling_factor=40):
         """
         Generates a custom snake game with a variable resolution and a variable
-        grid size for scale
+        grid size for scale. 
+        Note:
+            scaling_factor is the number of pixels per grid square
         """
-        self.display_x = _display_x
-        self.display_y = _display_y
-        self.grid = _grid_size
+        self.display_x = grid_size*scaling_factor
+        self.display_y = grid_size*scaling_factor
+        self.grid = grid_size  # number of grid locations
+        self.unit_size = scaling_factor  # size of a single unit
+        # handle the game grid with lists might not need these
+        self.grid_x = list(range(0, grid_size))
+        self.grid_y = list(range(0, grid_size))
+        self.game_colors = dict(orange=(255, 100, 0), blue=(0, 128, 255),
+                                black=(0,0,0), white=(255,255,255))
+        self.directions = {'up': 3, 'down': 1, 'left': 2, 'right': 0}
         self.snake = Snake()
 
     def render_x(self, i):
@@ -37,9 +49,10 @@ class SnakeGame:
         food_y = rd.randint(0, self.grid)
         return (food_x, food_y)
 
-    def init_game(self, _speed_modifier):
+    def init_game(self, speed_modifier):
         """
         Setup pygame
+            speed_modifier - units per second
         """
         pygame.init()
         pygame.font.init()
@@ -47,159 +60,128 @@ class SnakeGame:
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont('Comic Sans MS',
                                         round(self.display_y/40))
-        self.speed_modifier = _speed_modifier
+        self.speed_modifier = speed_modifier
+        pygame.time.set_timer(USEREVENT, 10)
 
-    def register_keypress(self):
-        pressed_key = pygame.key.get_pressed()
-        directions = {'up': 3, 'down': 1, 'left': 2, 'right': 0}
-        # might need to switch these to ifs depending on timing
-        if pressed_key[pygame.K_UP]:
-            self.snake.movement_direction = directions['up']
-        elif pressed_key[pygame.K_DOWN]:
-            self.snake.movement_direction = direction['down']
-        elif pressed_key[pygame.K_LEFT]:
-            self.snake.movement_direction = direction['left']
-        elif pressed_key[pygame.K_RIGHT]:
-            self.snake.movement_direction = direction['right']
-
-        # make sure you don't kill yourself by moving backwards accidentally
+    def register_keypress(self, pressed_key):
+        """
+        Register a keypress to change directions but don't allow
+        the snake to turn back on itself 180 degrees resulting in death
+        """
+        if pressed_key== pygame.K_UP and self.snake.movement_direction != self.directions['down']:
+            self.snake.movement_direction = self.directions['up']
+        elif pressed_key == pygame.K_DOWN and self.snake.movement_direction != self.directions['up']:
+            self.snake.movement_direction = self.directions['down']
+        elif pressed_key == pygame.K_LEFT and self.snake.movement_direction != self.directions['right']:
+            self.snake.movement_direction = self.directions['left']
+        elif pressed_key == pygame.K_RIGHT and self.snake.movement_direction != self.directions['left']:
+            self.snake.movement_direction = self.directions['right']
         
+    def check_inbounds(self):
+        """
+        check that the snake is in the game region
+        """
+        valid = True
+        if self.snake.segment_x[0] < 0:
+                valid = False
+        if self.snake.segment_x[0] > self.grid:
+                valid = False
+        if self.snake.segment_y[0] < 0:
+                valid = False
+        if self.snake.segment_y[0] > self.grid:
+                valid = False
+        return valid
+
+    def render_segment(self, loc_x, loc_y, segment_direction, interval):
+        """
+        blit a single snake segment with pygame.
+        pygame rectangle object uses top and left coordinates.
+        interval is a pixel interpolation value for smoothing video
+            every frame needs to continue in the direction it was moving
+            prior to the update
+        """
+        offset = 1
+        # location is the baseline location
+        # add a pixel modifier for movement direction for smooth animation
+        if segment_direction == self.directions['up']:
+            location = (loc_x*self.unit_size + offset,
+                        loc_y*self.unit_size + offset - interval,
+                        self.unit_size-2*offset,
+                        self.unit_size-2*offset)
+        elif segment_direction == self.directions['down']:
+            location = (loc_x*self.unit_size + offset,
+                        loc_y*self.unit_size + offset + interval,
+                        self.unit_size-2*offset,
+                        self.unit_size-2*offset)
+        elif segment_direction == self.directions['left']:
+            location = (loc_x*self.unit_size + offset - interval,
+                        loc_y*self.unit_size + offset,
+                        self.unit_size-2*offset,
+                        self.unit_size-2*offset)
+        elif segment_direction == self.directions['right']:
+            location = (loc_x*self.unit_size + offset + interval,
+                        loc_y*self.unit_size + offset,
+                        self.unit_size-2*offset,
+                        self.unit_size-2*offset)
+        pygame.draw.rect(self.screen, self.game_colors['blue'], location)
+    
+    def render_bounds(self):
+        """
+        draw the game bounds
+        """
+        pygame.draw.rect(self.screen, self.game_colors['white'], (0, 0, self.display_x, self.display_y), 1)
+
+    def wait_ticks(self):
+        self.clock.tick(self.speed_modifier)
+
+    def update_snake_movement(self):
+        """
+        update the snakes position
+        """
+        for i in range(1, self.snake.segments):
+                self.snake.segment_y[-i] = self.snake.segment_y[-i-1]
+                self.snake.segment_x[-i] = self.snake.segment_x[-i-1]
+
+        if self.snake.movement_direction == self.directions['up']:
+            self.snake.segment_y[0] -= 1
+        elif self.snake.movement_direction == self.directions['down']:
+            self.snake.segment_y[0] += 1
+        elif self.snake.movement_direction == self.directions['left']:
+            self.snake.segment_x[0] -= 1
+        elif self.snake.movement_direction == self.directions['right']:
+            self.snake.segment_x[0] += 1
+
+    def render_frame(self):
+        """
+        Everything for a single frame
+        """
+        for j in range(self.unit_size):
+            self.screen.fill(self.game_colors['black'])  # background
+            self.render_bounds()  # boundary        
+            for i in range(self.snake.segments):
+                if i == 0:
+                    segment_direction = self.snake.movement_direction
+                else:
+                    segment_direction =  # figure this out later
+                self.render_segment(self.snake.segment_x[i], self.snake.segment_y[i], segment_direction, j) 
+            pygame.display.flip()
 
     def snake_runner(self):
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-while not done:
-        for event in pygame.event.get():
+        alive = True
+        while alive:
+            for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                        done = True
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                        is_blue = not is_blue
-        
-        # make it so that you can't kill yourself by turning back into yourself
-        a = snake.movement_direction # for convenience
-        b = pastDirection # also convenient
-        if (a == 2 and b == 0): 
-            snake.movement_direction = pastDirection
-        if (a ==0 and b == 2):
-            snake.movement_direction = pastDirection
-        if (a == 1 and b == 3):
-            snake.movement_direction = pastDirection
-        if (a == 3 and b ==1):
-            snake.movement_direction = pastDirection
-        
-        
-        screen.fill((0, 0, 0))
-        if is_blue: color = (0, 128, 255)
-        else: color = (255, 100, 0)
-        
-        if count == speedControl:
-            snake.move_snake()
-            count = 0
-        else:
-            count = count+1
+                    alive = False  # handle game end
+                if event.type == pygame.KEYDOWN:
+                    self.register_keypress(event.key)
 
-        
-        for i in range(0,snake.segments):
-
-            if snake.movement_direction == 3:
-                x_add = 0
-                y_add = -2*count
-            if snake.movement_direction == 1:
-                x_add = 0
-                y_add = 2*count
-            if snake.movement_direction == 2:
-                x_add = -2*count
-                y_add = 0
-            if snake.movement_direction == 0:
-                x_add = 2*count
-                y_add = 0
-                    
-            if i > 0:
-                # up
-                if snake.segment_x[i] == snake.segment_x[i-1] and snake.segment_y[i] > snake.segment_y[i-1]:
-                    x_add = 0
-                    y_add = -count*2
-                # down
-                if snake.segment_x[i] == snake.segment_x[i-1] and snake.segment_y[i] < snake.segment_y[i-1]:
-                    x_add = 0
-                    y_add = count*2
-                # left
-                if snake.segment_x[i] > snake.segment_x[i-1] and snake.segment_y[i] == snake.segment_y[i-1]:
-                    x_add = -count*2
-                    y_add = 0
-                #right
-                if snake.segment_x[i] < snake.segment_x[i-1] and snake.segment_y[i] == snake.segment_y[i-1]:
-                    x_add = count*2
-                    y_add = 0
-                
+            self.update_snake_movement()
+            self.render_frame()
+            self.wait_ticks()  # wait for one event period.
             
-            pygame.draw.rect(screen, color, pygame.Rect(renderSnakeX(snake,i)+x_add,renderSnakeY(snake,i)+y_add , 18, 18))
-            # termination for the snake crashing into itself
-            pygame.draw.rect(screen, (255,100,0), pygame.Rect((food_x*20)+11,(food_y*20)+101 , 18, 18))
-            pygame.draw.lines(screen,(255,255,255),False,[[10,100],[810,100]],2)
-            pygame.draw.lines(screen,(255,255,255),False,[[10,100],[10,900]],2)
-            pygame.draw.lines(screen,(255,255,255),False,[[10,900],[810,900]],2)
-            pygame.draw.lines(screen,(255,255,255),False,[[810,100],[810,900]],2)
-            header_text = my_font.render('I''M A SNAKEY SNAKE',False, (255,255,255))
-            screen.blit(header_text,(300,10))
-            score_text = my_font.render('Score: ' + str(snake.segments-4),False, (255,255,255))
-            screen.blit(score_text,(300,50))
-            
-            
-            if snake.segment_x[0] < 0:
-                done = True
-            if snake.segment_x[0] > 39:
-                done = True
-            if snake.segment_y[0] < 0:
-                done = True
-            if snake.segment_y[0] > 39:
-                done = True
-            if i > 0:
-                curr_x = snake.segment_x[i]
-                curr_y = snake.segment_y[i]
-                head_x = snake.segment_x[0]
-                head_y = snake.segment_y[0]
-                if curr_x==head_x and curr_y==head_y:
-                    done = True
-        
-          
-        # ADD FOOD :)
-        
-        if food_got == True:
-            food_x = rd.randint(0,39)
-            food_y = rd.randint(0,39)
-            food_got = False
-        #if snake.movement_direction == 0:
-        head_x = snake.segment_x[0]
-        head_y = snake.segment_y[0]
-        
-        if food_x==head_x and food_y==head_y:
-            food_got = True
-            snake.segment_x = np.append(snake.segment_x,snake.segment_x[snake.segments-1])
-            snake.segment_y = np.append(snake.segment_y,snake.segment_y[snake.segments-1])
-            snake.segments = snake.segments+1
-        
-        
-        pygame.display.flip()
-        clock.tick(120)
+       
 
-
-
-pygame.display.flip()
-time.sleep(10)
-pygame.quit()
+if __name__ == '__main__':
+    snake_game = SnakeGame(scaling_factor=20)
+    snake_game.init_game(10)
+    snake_game.snake_runner()
