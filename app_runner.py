@@ -45,9 +45,8 @@ class SnakeGame:
         return (self.snake.segment_y[i]*20)+100+1
 
     def generate_food(self):
-        food_x = rd.randint(0, self.grid)
-        food_y = rd.randint(0, self.grid)
-        return (food_x, food_y)
+        self.food_x = rd.randint(0, self.grid-1)
+        self.food_y = rd.randint(0, self.grid-1)
 
     def init_game(self, speed_modifier):
         """
@@ -84,11 +83,11 @@ class SnakeGame:
         valid = True
         if self.snake.segment_x[0] < 0:
                 valid = False
-        if self.snake.segment_x[0] > self.grid:
+        if self.snake.segment_x[0] == self.grid -1:
                 valid = False
         if self.snake.segment_y[0] < 0:
                 valid = False
-        if self.snake.segment_y[0] > self.grid:
+        if self.snake.segment_y[0] == self.grid -1:
                 valid = False
         return valid
 
@@ -157,31 +156,63 @@ class SnakeGame:
         """
         for j in range(self.unit_size):
             self.screen.fill(self.game_colors['black'])  # background
-            self.render_bounds()  # boundary        
+            self.render_bounds()  # boundary
+            self.render_food()        
             for i in range(self.snake.segments):
                 if i == 0:
                     segment_direction = self.snake.movement_direction
                 else:
-                    segment_direction =  # figure this out later
+                    # get previous segment location and move in that direction
+                    prev_loc = [self.snake.segment_x[i-1], self.snake.segment_y[i-1]]
+                    curr_loc = [self.snake.segment_x[i], self.snake.segment_y[i]]
+
+                    if prev_loc[0] == curr_loc[0] and prev_loc[1] < curr_loc[1]:
+                        segment_direction = self.directions['up']
+                    elif prev_loc[0] == curr_loc[0] and prev_loc[1] > curr_loc[1]:
+                        segment_direction =  self.directions['down']
+                    elif prev_loc[0] < curr_loc[0] and prev_loc[1] == curr_loc[1]:
+                        segment_direction = self.directions['left']
+                    elif prev_loc[0] > curr_loc[0] and prev_loc[1] == curr_loc[1]:
+                        segment_direction = self.directions['right']
                 self.render_segment(self.snake.segment_x[i], self.snake.segment_y[i], segment_direction, j) 
             pygame.display.flip()
 
+    def render_food(self):
+        """
+        render the food
+        """
+        offset = 1
+        location = (self.food_x*self.unit_size + offset,
+                    self.food_y*self.unit_size + offset,
+                    self.unit_size-2*offset,
+                    self.unit_size-2*offset)
+        pygame.draw.rect(self.screen, self.game_colors['orange'], location)
+
+    def check_got_food(self):
+        if self.snake.segment_x[0] == self.food_x and self.snake.segment_y[0] == self.food_y:
+            self.snake.segments += 1
+            self.snake.segment_x.append(self.snake.segment_x[-1])
+            self.snake.segment_y.append(self.snake.segment_y[-1])
+            self.generate_food()
+
     def snake_runner(self):
         alive = True
+        self.generate_food()
         while alive:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     alive = False  # handle game end
                 if event.type == pygame.KEYDOWN:
                     self.register_keypress(event.key)
-
-            self.update_snake_movement()
             self.render_frame()
+            self.update_snake_movement()
+            alive = self.check_inbounds()
+            self.check_got_food()                                                       
             self.wait_ticks()  # wait for one event period.
             
        
 
 if __name__ == '__main__':
-    snake_game = SnakeGame(scaling_factor=20)
-    snake_game.init_game(10)
+    snake_game = SnakeGame(scaling_factor=35, grid_size=18)
+    snake_game.init_game(8)
     snake_game.snake_runner()
