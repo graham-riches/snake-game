@@ -45,8 +45,8 @@ class SnakeGame:
         return (self.snake.segment_y[i]*20)+100+1
 
     def generate_food(self):
-        self.food_x = rd.randint(0, self.grid-1)
-        self.food_y = rd.randint(0, self.grid-1)
+        self.food_x = rd.randint(1, self.grid-2)
+        self.food_y = rd.randint(1, self.grid-2)
 
     def init_game(self, speed_modifier):
         """
@@ -88,6 +88,9 @@ class SnakeGame:
         if self.snake.segment_y[0] < 0:
                 valid = False
         if self.snake.segment_y[0] == self.grid -1:
+                valid = False
+        for i in range(1, self.snake.segments):
+            if self.snake.segment_x[0] == self.snake.segment_x[i] and self.snake.segment_y[0] == self.snake.segment_y[i]:
                 valid = False
         return valid
 
@@ -176,6 +179,7 @@ class SnakeGame:
                         segment_direction = self.directions['right']
                 self.render_segment(self.snake.segment_x[i], self.snake.segment_y[i], segment_direction, j) 
             pygame.display.flip()
+            pygame.time.delay(self.speed_modifier)
 
     def render_food(self):
         """
@@ -208,11 +212,10 @@ class SnakeGame:
             self.update_snake_movement()
             alive = self.check_inbounds()
             self.check_got_food()                                                       
-            self.wait_ticks()  # wait for one event period.
             
        
 
 if __name__ == '__main__':
-    snake_game = SnakeGame(scaling_factor=35, grid_size=18)
-    snake_game.init_game(8)
+    snake_game = SnakeGame(scaling_factor=25, grid_size=20)
+    snake_game.init_game(4)
     snake_game.snake_runner()
