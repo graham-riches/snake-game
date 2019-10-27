@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Sept 27, 2019
-
 @author: Graham Riches
-
-Snake class for snake game. It has segments, and it can move.
-This is extendable to snake AI functionality.
+@brief:  Snake class for snake game. It has segments, and it can move.
+         This is extendable to snake AI functionality.
 """
 
 

@@ -1,2 +1,0 @@
-# snakeAnimation
-Python snake game.

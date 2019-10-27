@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Created on Fri Sep 27 21:08:34 2019
 
 @author: Graham Riches
-    snake game class. Handles the running of the game.
+@brief snake game engine
+
 """
 import sys
 sys.path.append('C:\ProgramData\Anaconda3\Lib\site-packages')
@@ -13,7 +13,7 @@ import numpy as np
 import pygame
 from pygame.locals import USEREVENT
 import time
-from app_snake import Snake
+from snake_objs import Snake
 
 
 class SnakeGame:
@@ -183,7 +183,7 @@ class SnakeGame:
 
     def render_food(self):
         """
-        render the food
+        render the food to a random location in the game window
         """
         offset = 1
         location = (self.food_x*self.unit_size + offset,
@@ -216,6 +216,6 @@ class SnakeGame:
        
 
 if __name__ == '__main__':
-    snake_game = SnakeGame(scaling_factor=25, grid_size=20)
+    snake_game = SnakeGame(scaling_factor=30, grid_size=20)
     snake_game.init_game(4)
     snake_game.snake_runner()
