@@ -13,7 +13,11 @@ import numpy as np
 import pygame
 from pygame.locals import USEREVENT
 import time
+import os
+import json
 from snake_objs import Snake
+from game_score import GameScore
+from datetime import datetime
 
 
 class SnakeGame:
@@ -26,6 +30,7 @@ class SnakeGame:
         """
         self.display_x = grid_size*scaling_factor
         self.display_y = grid_size*scaling_factor
+        self.score_size = 24  # pixels for the score area
         self.grid = grid_size  # number of grid locations
         self.unit_size = scaling_factor  # size of a single unit
         # handle the game grid with lists might not need these
@@ -35,6 +40,23 @@ class SnakeGame:
                                 black=(0,0,0), white=(255,255,255))
         self.directions = {'up': 3, 'down': 1, 'left': 2, 'right': 0}
         self.snake = Snake()
+        self.score = GameScore()
+        self.score.simple_score_with_highscore('snake_game')
+    
+    def load_highscore(self):
+        path = self.score.get_path('snake_game')
+        try:
+            with open(path) as json_file:
+                old_score = json.load(json_file)
+            self.high_score = old_score['high_score']
+        except:
+            self.high_score = 0
+    
+    def save_score(self):
+        path = self.score.get_path('snake_game')
+        with open(path, 'w') as json_file:
+            _score = {'high_score':self.score.get_score('snake_game')}
+            json.dump(_score, json_file)
 
     def render_x(self, i):
         # return the snake pixel locations of the current location
@@ -55,12 +77,12 @@ class SnakeGame:
         """
         pygame.init()
         pygame.font.init()
-        self.screen = pygame.display.set_mode((self.display_x, self.display_y))
+        self.screen = pygame.display.set_mode((self.display_x, self.display_y + self.score_size))
         self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont('Comic Sans MS',
-                                        round(self.display_y/40))
+        self.font = pygame.font.Font('freesansbold.ttf', round(self.score_size/1.25))
         self.speed_modifier = speed_modifier
         pygame.time.set_timer(USEREVENT, 10)
+        self.load_highscore()
 
     def register_keypress(self, pressed_key):
         """
@@ -178,6 +200,7 @@ class SnakeGame:
                     elif prev_loc[0] > curr_loc[0] and prev_loc[1] == curr_loc[1]:
                         segment_direction = self.directions['right']
                 self.render_segment(self.snake.segment_x[i], self.snake.segment_y[i], segment_direction, j) 
+            self.render_score()
             pygame.display.flip()
             pygame.time.delay(self.speed_modifier)
 
@@ -191,6 +214,16 @@ class SnakeGame:
                     self.unit_size-2*offset,
                     self.unit_size-2*offset)
         pygame.draw.rect(self.screen, self.game_colors['orange'], location)
+    
+    def render_score(self):
+        """ show the score at the bottom """
+        location = (0, self.display_y, self.display_x, self.score_size)
+        pygame.draw.rect(self.screen, self.game_colors['black'], location)
+        score_text = self.font.render('Score: {}    High Score: {}'.format(self.score.get_score('snake_game'), self.high_score),
+                                      True, self.game_colors['white'])
+        rect = score_text.get_rect()
+        rect.center = (self.display_x / 2, self.display_y + self.score_size/2)
+        self.screen.blit(score_text, rect)
 
     def check_got_food(self):
         if self.snake.segment_x[0] == self.food_x and self.snake.segment_y[0] == self.food_y:
@@ -198,6 +231,8 @@ class SnakeGame:
             self.snake.segment_x.append(self.snake.segment_x[-1])
             self.snake.segment_y.append(self.snake.segment_y[-1])
             self.generate_food()
+            self.score.add(1, 'snake_game')
+            print('{}   DEBUG: score = {}'.format(datetime.now(), self.score.get_score('snake_game')))
 
     def snake_runner(self):
         alive = True
@@ -211,7 +246,9 @@ class SnakeGame:
             self.render_frame()
             self.update_snake_movement()
             alive = self.check_inbounds()
-            self.check_got_food()                                                       
+            self.check_got_food() 
+        if self.score.get_score('snake_game') > self.high_score:
+            self.save_score()                                                  
             
        
 
