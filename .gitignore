@@ -1,1 +1,3 @@
 game_score.json
+**.pyc
+__pycache__/*
